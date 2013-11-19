@@ -14,19 +14,20 @@ public class MarkovCluster {
 
 	public HashMap<Integer,ArrayList<Integer>> IdtoNodes = new HashMap<Integer,ArrayList<Integer>>();
 	public HashMap<Integer,Integer> NewNodes = new HashMap<Integer,Integer>();
-	int dimensions;
+	public int dimensions;
 	int clusters;
 	public String fileName;
 	public double initialMatrix[][];
 	public double MMatrix[][];
 	public double sLMatrix[][];
+	public ArrayList<Integer> tempNodes = new ArrayList<Integer>();
 	
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
 		MarkovCluster m= new MarkovCluster();
 		m.getInfofrmUser();
 		m.InitialMatrix();
-		m.NormalizedMatrix();
+		
 		
 	}
 	
@@ -42,64 +43,91 @@ public class MarkovCluster {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		readFile();
-        
+		readfile();
+		readfile1();
 	}
 	
-	@SuppressWarnings("deprecation")
-	public void readFile(){
+	
+	
+	public void readfile(){
 		try {
 			File file = new File(this.fileName);
 			FileInputStream fileInputStream = new FileInputStream(file);
 			BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);			
 			DataInputStream dataInputStream = new DataInputStream(bufferedInputStream);
-			ArrayList<Integer> temp= new ArrayList<Integer>();
-			ArrayList<Integer> temp1= new ArrayList<Integer>();
-			int newNodeId=0;
-			int[] tempNodes;
-			
 			while (dataInputStream.available() != 0){
 				String items[];
         		//if(fileName.equals("yeast_undirected_metabolic.txt"))                        
         		items = dataInputStream.readLine().split("\\s+");
         		/*else
         			items = dataInputStream.readLine().split(" ");*/
-     
-        		if(IdtoNodes.containsKey(Integer.parseInt(items[0]))){
-        			temp =  IdtoNodes.get(Integer.parseInt(items[0]));
-        			temp.add(Integer.parseInt(items[1]));
-        			temp1.add(Integer.parseInt(items[0]));
-        			//System.out.println(items[0]);
-        			IdtoNodes.put(Integer.parseInt(items[0]), temp);
-        			IdtoNodes.put(Integer.parseInt(items[1]), temp1);
+        		if(tempNodes.isEmpty()){
+        			tempNodes.add(Integer.parseInt(items[0]));
+            		tempNodes.add(Integer.parseInt(items[1]));        			
         		}
         		else{
-        			temp.add(Integer.parseInt(items[1]));
-        			temp1.add(Integer.parseInt(items[0]));
-        			IdtoNodes.put(Integer.parseInt(items[0]), temp);
-        			IdtoNodes.put(Integer.parseInt(items[1]), temp1);
-        			NewNodes.put(Integer.parseInt(items[0]), newNodeId);
-        			newNodeId++;
-        			//System.out.println(items[0]);	
-        		}
-        		//tempnodes=
-        	}
+        			for(int i=0;i<tempNodes.size();i++)
+	        		{
+	        		     if( !tempNodes.contains(Integer.parseInt(items[0]))) 
+	        		     {
+	        		    	 tempNodes.add(Integer.parseInt(items[0]));
+	        		    
+	        		     }
+	        		     if( !tempNodes.contains(Integer.parseInt(items[1]))) 
+	        		     {
+	        		    	 tempNodes.add(Integer.parseInt(items[1]));
+	        		     }
+	        		}
+        		}	        		
+			}
 			fileInputStream.close();
 			bufferedInputStream.close();
 			dataInputStream.close();
 		}catch (Exception er) {
 			er.printStackTrace();
 		}
-		dimensions = IdtoNodes.keySet().size();
+		dimensions =tempNodes.size();
 		System.out.println("dim"+dimensions);
 	}
-	public void InitialMatrix(){
-		initialMatrix= new double [dimensions][dimensions];
-		for (int key:IdtoNodes.keySet()) {
-			for (int node:IdtoNodes.get(key)) {
-				initialMatrix[key][node]=1; 
-				}			
+	
+	@SuppressWarnings("deprecation")
+	public void readfile1(){
+		try{
+			File file = new File(this.fileName);
+			FileInputStream fileInputStream = new FileInputStream(file);
+			BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);			
+			DataInputStream dataInputStream = new DataInputStream(bufferedInputStream);
+			int i1 = 0,i2=0;
+			initialMatrix= new double [dimensions][dimensions];
+			while (dataInputStream.available() != 0){
+				String items[];
+	    		//if(fileName.equals("yeast_undirected_metabolic.txt"))                        
+	    		items = dataInputStream.readLine().split("\\s+");
+	    		/*else
+	    			items = dataInputStream.readLine().split(" ");*/
+	    	
+	 			for(int i=0;i<tempNodes.size();i++)
+	        		{
+	        		     if( tempNodes.get(i).equals(Integer.parseInt(items[0]))) 
+	        		     {
+	        		    	 i1=i;	        		    
+	        		     }
+	        		     else if(tempNodes.get(i).equals(Integer.parseInt(items[1]))) 
+	        		     {
+	        		    	  i2=i;
+	        		     }
+	        		}
+	 			initialMatrix[i1][i2]=1;
+	  		    initialMatrix[i2][i1]=1;
+	    		}
+			fileInputStream.close();
+			bufferedInputStream.close();
+			dataInputStream.close();
+			} catch(Exception er) {
+			er.printStackTrace();
 		}
+}
+	public void InitialMatrix(){
 		sLMatrix=new double [dimensions][dimensions];
         for(int i=0;i<dimensions;i++){        
                 for(int j=0;j<dimensions;j++)        
@@ -115,21 +143,61 @@ public class MarkovCluster {
                 }
                 
         }
+        NormalizedMatrix(sLMatrix);
 	}
-	public void NormalizedMatrix(){
-		double count=0;
-		for(int i=0;i<dimensions;i++){        
+	public void NormalizedMatrix(double[][] randMatrix ){
+		double count;
+		MMatrix= new double[dimensions][dimensions];
+		for(int i=0;i<dimensions;i++){   
+			count=0;
             for(int j=0;j<dimensions;j++)  {
-            	if(sLMatrix[i][j]==1)
-            		count++;
-            }       
+            	count+=randMatrix[i][j];
+            }  
+            System.out.println(count);
             for(int k=0;k<dimensions;k++)  {
-            	if(sLMatrix[i][k]==1){
+            	if(randMatrix[i][k]>0){
             		MMatrix[i][k]=1/count;
-            		MMatrix[i][k]=(double)Math.round(MMatrix[i][k]*1000)/1000;
+            		MMatrix[i][k]=(double)Math.round(MMatrix[i][k]*100)/100;
             	}
             }
 		}
+		ExpansionMatrix(MMatrix);
 	}
 	
+	public  double[][] ExpansionMatrix(double[][] currentMatrix){
+		double Val=0.0;
+        double[][] expansionMatrix=new double[dimensions][dimensions];
+        for(int i=0;i<dimensions;i++)
+        {
+                for(int j=0;j<dimensions;j++)
+                {
+                        double sum=0.0;
+                        for(int k=0;k<dimensions;k++)
+                        {
+                                sum+= currentMatrix[i][k]*currentMatrix[k][j];
+                        }
+                        Val=(double)sum;
+                        expansionMatrix[i][j]=(double)Math.round(Val*100)/100;
+                }
+        }
+        InflationMatrix(expansionMatrix);
+		return expansionMatrix;
+		
+	}
+	
+	public double[][] InflationMatrix(double[][] currentMatrix){
+		double sqVal=0.0;
+        double[][] inflationMatrix=new double[dimensions][dimensions];
+        for(int i=0;i<dimensions;i++)
+        {
+        	for(int j=0;j<dimensions;j++)
+        	{
+        		double sqsum=0.0;
+        		sqsum+= currentMatrix[i][j]*currentMatrix[i][j];
+        		sqVal=(double)sqsum;
+        		inflationMatrix[i][j]=(double)Math.round(sqVal*100)/100;
+        	}
+        }
+		return inflationMatrix;
+	}
 }
