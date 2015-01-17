@@ -5,25 +5,22 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Vector;
 
-import Jama.Matrix;
 
 /*Akshay Data Mining HW3 on Markov Clustering*/
 
-public class MarkovClustering {
+public class MarkovClusteringAlgorithm {
 
 	int e = 2; // Power parameter
 	int r = 2; // Inflation parameter
 
 	public String filePath;
-	
-	double tolerance = (double) 1.0E-20;
+
+	double tolerance = (double) 1.0E-200;
 
 	ArrayList<Integer> attNodes = new ArrayList<Integer>();//stores att nodes
 	ArrayList<String> physicsNodes = new ArrayList<String>();//stores physics nodes
@@ -33,26 +30,27 @@ public class MarkovClustering {
 	double[][] physicsNodeMatrix;
 	double[][] yeastNodeMatrix;
 
-	String attFilePath = System.getProperty("user.dir") + "/src/Data/attweb_net.txt";
-	String physicsFilePath = System.getProperty("user.dir") + "/src/Data/physics_collaboration_net.txt";
-	String yeastFilePath = System.getProperty("user.dir") + "/src/Data/yeast_undirected_metabolic.txt";
-	
-	String attFilePathtest = System.getProperty("user.dir") + "/src/Data/attweb_nettest.txt";
-	String physicsFilePathtest = System.getProperty("user.dir") + "/src/Data/physics_collaboration_nettest.txt";
-	String yeastFilePathtest = System.getProperty("user.dir") + "/src/Data/yeast_undirected_metabolictest.txt";
-	
-	String attCLUFilePath = System.getProperty("user.dir") + "/src/Data/attweb_netCLU.clu";
-	String physicsCLUFilePathtest = System.getProperty("user.dir") + "/src/Data/physics_collaboration_netCLU.clu";
-	String yeastCLUFilePathtest = System.getProperty("user.dir") + "/src/Data/yeast_undirected_metabolicCLU.clu";
-	
+	String attFilePath; 
+	String physicsFilePath;
+	String yeastFilePath;
+	String cluPath;
+	String attCLUFilePath;
+	String physicsCLUFilePath;
+	String yeastCLUFilePath;
+
 	ArrayList<Vector> clusterList; 
 
 	public static void main(String args[]){
-		/*test tes = new test();
-		tes.norm();*/
-		MarkovClustering mc = new MarkovClustering();
+		MarkovClusteringAlgorithm mc = new MarkovClusteringAlgorithm();
+		mc.attFilePath = mc.getInfofrmUser("ATT Web");
+		mc.physicsFilePath = mc.getInfofrmUser("Physics Collboration");
+		mc.yeastFilePath = mc.getInfofrmUser("Yeast undirected");
+		mc.cluPath = mc.getInfofrmUser(" Folder for CLU Files " );
+		mc.attCLUFilePath = mc.getInfofrmUser("ATT CLU file");
+		mc.physicsCLUFilePath = mc.getInfofrmUser("Physics CLU file");
+		mc.yeastCLUFilePath = mc.getInfofrmUser("Yeast CLU file");
+		
 		mc.operations();
-		Matrix mat = new Matrix(mc.attNodeMatrix);
 	}
 
 	public void operations(){
@@ -61,75 +59,63 @@ public class MarkovClustering {
 		readFiles(attFilePath);
 		readFiles(physicsFilePath);
 		readFiles(yeastFilePath);
-		
+
 		//Initialize all the matrices by reading the file and the corresponding mapping matrix.
 		attNodeMatrix = createMatrix(attNodes, attFilePath);
 		physicsNodeMatrix = createMatrix(physicsNodes, physicsFilePath);
 		yeastNodeMatrix = createMatrix(yeastNodes, yeastFilePath);
-		
+
 		//Initialize the counts
 		int attCount=0;
 		int physicsCount = 0;
 		int yeastCount = 0;
-
-		//printMatrix(physicsNodeMatrix);
-		while(attCount<18){
-		//while(!(convergence(attNodeMatrix, 0.97, 0.02) && attCount!=0)){
-			//attNodeMatrix = addSelfLoops(attNodeMatrix);
+		double[][] temp;
+		
+		temp = new double[attNodeMatrix.length][attNodeMatrix.length];
+		attNodeMatrix = addSelfLoops(attNodeMatrix);
+		while(!withinTolerance(temp, attNodeMatrix,0.99910)){
+		//while(attCount<15){
+			temp = attNodeMatrix;
 			attNodeMatrix = NormalizedMatrix(attNodeMatrix);
 			attNodeMatrix = ExpansionMatrix(attNodeMatrix);
-			attNodeMatrix = InflationMatrix(attNodeMatrix);
+			attNodeMatrix = InflationMatrix(attNodeMatrix,1.34);
 			attNodeMatrix = pruneMatrix(attNodeMatrix);
 			attCount++;
 		}
 		findClusters(attNodeMatrix);
 		System.out.println("attCount" + attCount + " " + clusterList.size());
 		writeCLUFile(attCLUFilePath, clusterList);
-		
-		double[][] temp = new double[physicsNodeMatrix.length][physicsNodeMatrix.length];
-		
-		//while(!withinTolerance(temp, physicsNodeMatrix)){
-		while(physicsCount<21){
-			//physicsNodeMatrix = addSelfLoops(physicsNodeMatrix);
+
+		temp = new double[physicsNodeMatrix.length][physicsNodeMatrix.length];
+		physicsNodeMatrix = addSelfLoops(physicsNodeMatrix);
+		while(!withinTolerance(temp, physicsNodeMatrix, 0.99930)){
 			temp = physicsNodeMatrix;
 			physicsNodeMatrix = NormalizedMatrix(physicsNodeMatrix);	
 			physicsNodeMatrix = ExpansionMatrix(physicsNodeMatrix);
-			physicsNodeMatrix = InflationMatrix(physicsNodeMatrix);
+			physicsNodeMatrix = InflationMatrix(physicsNodeMatrix,1.34);
 			physicsNodeMatrix = pruneMatrix(physicsNodeMatrix);
 			physicsCount++;
 		}
 		findClusters(physicsNodeMatrix);
 		System.out.println("physicsCount" + physicsCount + " " + clusterList.size());
-		
-		writeCLUFile(physicsCLUFilePathtest, clusterList);
-		
-		//mc.printMatrix(mc.attNodeMatrix.getArray());
-		while(yeastCount<35){
-		//while(!(convergence(yeastNodeMatrix, 0.97, 0.02) && yeastCount!=0)){
-			//yeastNodeMatrix = addSelfLoops(yeastNodeMatrix);
+		writeCLUFile(physicsCLUFilePath, clusterList);
+
+		temp = new double[yeastNodeMatrix.length][yeastNodeMatrix.length];
+		yeastNodeMatrix = addSelfLoops(yeastNodeMatrix);
+		while(!withinTolerance(temp, yeastNodeMatrix,0.9971)){
 			yeastNodeMatrix = NormalizedMatrix(yeastNodeMatrix);
 			yeastNodeMatrix = ExpansionMatrix(yeastNodeMatrix);
-			yeastNodeMatrix = InflationMatrix(yeastNodeMatrix);
+			yeastNodeMatrix = InflationMatrix(yeastNodeMatrix,1.34);
 			yeastNodeMatrix = pruneMatrix(yeastNodeMatrix);
 			yeastCount++;
 		}
 		findClusters(yeastNodeMatrix);
 		System.out.println("yeastCount" + yeastCount + " " + clusterList.size());
-		writeCLUFile(yeastCLUFilePathtest, clusterList);
-		
+		writeCLUFile(yeastCLUFilePath, clusterList);
+
 		System.out.println("Done");
-		
-		/*for(int i=0;i<clusterList.size();i++){
-			Iterator<Integer> iter = clusterList.get(i).iterator();
-			while(iter.hasNext())
-				System.out.print(iter.next() + " ");
-			System.out.println();
-		}*/
-		writeFile(attFilePathtest,attNodeMatrix);
-		writeFile(physicsFilePathtest,physicsNodeMatrix);
-		writeFile(yeastFilePathtest, yeastNodeMatrix);
 	}
-	
+
 	public void writeFile(String filePath, double[][] inputArr){
 		try {
 			int dimensions = inputArr.length;
@@ -145,16 +131,15 @@ public class MarkovClustering {
 				bw.newLine();
 			}
 			bw.close();
-			
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void writeCLUFile(String filePath, ArrayList<Vector> inputArr){
 		try {
-			
+
 			int dimensions = 0;
 			if(filePath.contains("attweb")){
 				dimensions = attNodes.size();
@@ -165,21 +150,19 @@ public class MarkovClustering {
 			if(filePath.contains("yeast")){
 				dimensions = yeastNodes.size();
 			}
-			
+
 			File file = new File(filePath);
 			if(!file.exists())
 				file.createNewFile();
 			FileWriter fw = new FileWriter(file.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
 			int count = 0; //counter for node / line you're writing data for.
-			System.out.println(dimensions);
 			bw.write("*Vertices " + new Integer(dimensions).toString());
 			while(count<dimensions){
 				for(int i=0;i<inputArr.size();i++){
 					Vector vect = inputArr.get(i);
 					for(int j=0;j<vect.size();j++){
 						if((int)vect.get(j) == count){
-							//System.out.println(i);
 							bw.newLine();
 							bw.write(new Integer(i).toString());
 							count++;
@@ -188,22 +171,20 @@ public class MarkovClustering {
 				}
 			}
 			bw.close();
-			
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	//Take input from the user. 
-	public void getInfofrmUser(){
+	public String getInfofrmUser(String str){
 		Scanner userInput = new Scanner(System.in);
 		System.out.println("*********** IMPLEMENTATION OF Markov(MCL) ALGORITHM **********");
-		//fileName="D:/UB 2012-13/Java files/MCLalgo/src/data/yeast_undirected_metabolic.txt";
-		filePath = System.getProperty("user.dir") + "/src/Data/attweb_net.txt";
-		System.out.println("Enter the file path"); // to read file path
-		InputStreamReader input = new InputStreamReader(System.in);
-		BufferedReader reader = new BufferedReader(input);
+		System.out.println("Enter the file path for " + str ); // to read file path
+		Scanner scanner = new Scanner(System.in);
+		String filePath = scanner.nextLine();
+		return filePath;
 	}
 	public void readFiles(String filePath){
 
@@ -253,30 +234,30 @@ public class MarkovClustering {
 		}
 		return retElement;
 	}
-	
+
 	public boolean searchVectorElement(ArrayList<Vector> array, Vector vect){
 		boolean flag = false;
 		if(array!=null && array.size() > 0){
-		for(int i=0;i<array.size();i++){
-			Vector vect1 = array.get(i);
-			if(vect1.size() == vect.size()){
-				flag = true;
-				for(int j=0;j<vect1.size();j++){
+			for(int i=0;i<array.size();i++){
+				Vector vect1 = array.get(i);
+				if(vect1.size() == vect.size()){
+					flag = true;
 					Collections.sort(vect);
 					Collections.sort(vect1);
-					if(vect1.get(j)!=vect.get(j)){
-						flag = false;
-						break;
+					for(int j=0;j<vect1.size();j++){
+						if(vect1.get(j)!=vect.get(j)){
+							flag = false;
+							break;
+						}
 					}
 				}
 			}
-		}
 		}else{
 			flag = false;
 		}
 		return flag;
 	}
-	
+
 	public int searchStringElement(ArrayList<String> array, String str){
 		int retElement = 99999; 
 		for(int i=0;i<array.size();i++){
@@ -289,7 +270,6 @@ public class MarkovClustering {
 
 	//Print the contents of the array list. 
 	public void printArrayList(ArrayList arrList){
-		System.out.println(arrList.size());
 		for(int i=0;i<arrList.size();i++){
 			System.out.println("Index i = " + i + " -- " + arrList.get(i));
 		}
@@ -355,7 +335,7 @@ public class MarkovClustering {
 	//Multiplying the matrix with itself - Expansion
 	public  double[][] ExpansionMatrix(double[][] inputMatrix){
 		int dimensions = inputMatrix.length;
-		
+
 		double Val=0.0;
 		double[][] expansionMatrix=new double[dimensions][dimensions];
 		for(int i=0;i<dimensions;i++)
@@ -368,25 +348,21 @@ public class MarkovClustering {
 					sum+= inputMatrix[i][k]*inputMatrix[k][j];
 				}
 				expansionMatrix[i][j] = sum;
-				//Val=(double)sum;
-				//expansionMatrix[i][j]=(double)Math.round(Val*1000)/1000; //Scrapping decimal places
 			}
 		}
 		return expansionMatrix;
 	}
 
 	//Squaring each element - Inflating
-	public double[][] InflationMatrix(double[][] inputMatrix){
+	public double[][] InflationMatrix(double[][] inputMatrix, double gamma){
 		int dimensions = inputMatrix.length;
 		double sqVal=0.0;
 		double[][] inflationMatrix=new double[dimensions][dimensions];
 		for(int i=0;i<dimensions;i++){
 			for(int j=0;j<dimensions;j++){
 				double sqsum=0.0;
-				sqsum+= inputMatrix[i][j]*inputMatrix[i][j];
+				sqsum+= Math.pow(inputMatrix[i][j], gamma);
 				inflationMatrix[i][j] = sqsum;
-				//sqVal=(double)sqsum;
-				//inflationMatrix[i][j]=(double)Math.round(sqVal*1000)/1000; //scrapping decimal places
 			}
 		}
 		return inflationMatrix;
@@ -405,18 +381,17 @@ public class MarkovClustering {
 	//Dividing each element by the sum of the elements in it's column - Normalizing
 	public double[][] NormalizedMatrix(double[][] randMatrix){
 		double[] sums = new double[randMatrix.length];
-		
+
 		for(int i =0;i<randMatrix.length;i++){
 			for(int j =0; j<randMatrix[i].length;j++){
 				sums[i] = sums[i] + randMatrix[j][i]; // Sum of values in a column
 			}
-			//System.out.println(sums[i]);
 		}
-		
+
 		for(int i=0;i<randMatrix.length;i++){   
-            for(int j=0;j<randMatrix[i].length;j++)  {
-            	randMatrix[i][j] = randMatrix[i][j]/sums[j];
-            }
+			for(int j=0;j<randMatrix[i].length;j++)  {
+				randMatrix[i][j] = randMatrix[i][j]/sums[j];
+			}
 		}
 		return randMatrix;
 	}
@@ -432,18 +407,6 @@ public class MarkovClustering {
 		return inputArr;
 	}
 
-	//Verify if onvergence is achieved by checking if there is any value in the matrix that lies between min and max.
-	/*public boolean convergence(double[][] inputArr, double max, double min){
-		for(int i =0;i<inputArr.length;i++){
-			for(int j =0; j<inputArr[i].length;j++){
-				if(inputArr[i][j] > min && inputArr[i][j] < max){
-					//System.out.println(inputArr[i][j] + " ** " + i + " ** " +j);
-					return false;
-				}
-			}
-		}
-		return true;
-	}*/
 	public void findClusters(double[][] inputArr){
 		clusterList = new ArrayList<>();
 		int  count = 0;
@@ -461,8 +424,8 @@ public class MarkovClustering {
 		}
 		System.out.println("** " + count);
 	}
-	
-	public boolean withinTolerance(double[][] oldMat, double[][] newMat){
+
+	public boolean withinTolerance(double[][] oldMat, double[][] newMat, double ratio){
 		int dimensions = oldMat.length;
 		int equalElements=0;
 		equalElements=0;
@@ -475,8 +438,10 @@ public class MarkovClustering {
 					equalElements++;
 				}
 			}
-		}          
-		if((equalElements/count) <0.05){
+		}   
+		double calcRatio = (double)equalElements/count;
+		
+		if(calcRatio > ratio){
 			flag = true;
 		}
 		return flag;

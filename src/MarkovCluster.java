@@ -9,7 +9,6 @@ import java.io.ObjectInputStream.GetField;
 
 import java.util.*;
 
-
 public class MarkovCluster {
 
 	public HashMap<Integer,ArrayList<Integer>> IdtoNodes = new HashMap<Integer,ArrayList<Integer>>();
@@ -23,28 +22,23 @@ public class MarkovCluster {
 	public ArrayList<Integer> tempNodes = new ArrayList<Integer>();
 	
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
 		MarkovCluster m= new MarkovCluster();
 		m.getInfofrmUser();
 		m.InitialMatrix();
-		
-		
+		//m.NormalizedMatrix();
+
 	}
 	
 	public void getInfofrmUser(){
 		Scanner userInput = new Scanner(System.in);
 		System.out.println("*********** IMPLEMENTATION OF Markov(MCL) ALGORITHM **********");
 		//fileName="D:/UB 2012-13/Java files/MCLalgo/src/data/yeast_undirected_metabolic.txt";
+		fileName = System.getProperty("user.dir") + "/src/Data/attweb_net.txt";
         System.out.println("Enter the file path"); // to read file path
-		InputStreamReader input = new InputStreamReader(System.in);
-		BufferedReader reader = new BufferedReader(input);
-		try {
-			this.fileName= reader.readLine();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		//InputStreamReader input = new InputStreamReader(System.in);
+		//BufferedReader reader = new BufferedReader(input);
+        this.fileName= fileName;
 		readfile();
-		readfile1();
 	}
 	
 	
@@ -201,3 +195,4 @@ public class MarkovCluster {
 		return inflationMatrix;
 	}
 }
+
